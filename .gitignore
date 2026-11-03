@@ -1,0 +1,26 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# XcodeGen output — regenerate with `xcodegen generate`
+*.xcodeproj
+Sources/Info.plist
+!project.yml
+
+# Codemagic / signing
+*.p12
+*.mobileprovision
+*.p8
+certificates/
+
+# macOS
+.DS_Store
+
+# Secrets
+.env
+secrets/
