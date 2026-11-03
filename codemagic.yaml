@@ -42,6 +42,7 @@ workflows:
         XCODE_PROJECT: SerialShelf.xcodeproj
         XCODE_SCHEME: SerialShelf
         BUNDLE_ID: com.luebberspobre.serialshelf
+        TEAM_ID: 6FY8HHKPS2
       # In Codemagic: App settings → Environment variables → this group.
       # APP_STORE_CONNECT_PRIVATE_KEY (.p8 contents, base64 is fine)
       # APP_STORE_CONNECT_KEY_ID
@@ -69,6 +70,20 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
+      - name: Verify signing settings
+        script: |
+          echo "--- downloaded profiles ---"
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles" || true
+          for p in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+            [ -e "$p" ] || continue
+            echo "profile file: $(basename "$p")"
+            security cms -D -i "$p" | plutil -extract Name raw - || true
+            security cms -D -i "$p" | plutil -extract application-identifier raw - || true
+          done
+          echo "--- resolved build settings ---"
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -showBuildSettings 2>/dev/null \
+            | grep -E "(DEVELOPMENT_TEAM|CODE_SIGN_STYLE|CODE_SIGN_IDENTITY|PROVISIONING_PROFILE_SPECIFIER|PRODUCT_BUNDLE_IDENTIFIER)" || true
+
       - name: Build IPA
         script: |
           xcode-project build-ipa \
