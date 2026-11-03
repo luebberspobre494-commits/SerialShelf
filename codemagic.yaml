@@ -96,10 +96,12 @@ workflows:
 
           echo "p8 header  : ${APP_STORE_CONNECT_PRIVATE_KEY%%$'\n'*}"
           echo "pem header : ${CERTIFICATE_PRIVATE_KEY%%$'\n'*}"
-          echo "key id len : ${#APP_STORE_CONNECT_KEY_ID:-}"
-          echo "issuer len : ${#APP_STORE_CONNECT_ISSUER_ID:-}"
+          KEY_ID_LEN=$(printf '%s' "${APP_STORE_CONNECT_KEY_ID:-}" | wc -c | tr -d ' ')
+          ISSUER_LEN=$(printf '%s' "${APP_STORE_CONNECT_ISSUER_ID:-}" | wc -c | tr -d ' ')
+          echo "key id len : $KEY_ID_LEN"
+          echo "issuer len : $ISSUER_LEN"
 
-          if [ "${#APP_STORE_CONNECT_KEY_ID:-}" -eq 0 ] || [ "${#APP_STORE_CONNECT_ISSUER_ID:-}" -eq 0 ]; then
+          if [ "$KEY_ID_LEN" -eq 0 ] || [ "$ISSUER_LEN" -eq 0 ]; then
             echo "ERROR: APP_STORE_CONNECT_KEY_ID or APP_STORE_CONNECT_ISSUER_ID is empty."
             echo "Check the variable names in the appstore_credentials group."
             exit 1
