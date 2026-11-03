@@ -66,8 +66,57 @@ workflows:
           ls -la
       - name: Set up code signing
         script: |
+          set -euo pipefail
+
+          echo "== credential sanity check =="
+          for v in APP_STORE_CONNECT_PRIVATE_KEY APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID CERTIFICATE_PRIVATE_KEY; do
+            val="${!v:-}"
+            echo "$v length=${#val}"
+          done
+
+          # Normalise values that arrived with escaped newlines or as base64.
+          normalise() {
+            local value="$1"
+            case "$value" in
+              *BEGIN*)
+                case "$value" in
+                  *'\n'*) printf '%b' "$value" ;;
+                  *) printf '%s' "$value" ;;
+                esac
+                ;;
+              *)
+                printf '%s' "$value" | base64 --decode 2>/dev/null || printf '%s' "$value"
+                ;;
+            esac
+          }
+
+          APP_STORE_CONNECT_PRIVATE_KEY="$(normalise "${APP_STORE_CONNECT_PRIVATE_KEY:-}")"
+          CERTIFICATE_PRIVATE_KEY="$(normalise "${CERTIFICATE_PRIVATE_KEY:-}")"
+          export APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY
+
+          echo "p8 header  : ${APP_STORE_CONNECT_PRIVATE_KEY%%$'\n'*}"
+          echo "pem header : ${CERTIFICATE_PRIVATE_KEY%%$'\n'*}"
+          echo "key id len : ${#APP_STORE_CONNECT_KEY_ID:-}"
+          echo "issuer len : ${#APP_STORE_CONNECT_ISSUER_ID:-}"
+
+          if [ "${#APP_STORE_CONNECT_KEY_ID:-}" -eq 0 ] || [ "${#APP_STORE_CONNECT_ISSUER_ID:-}" -eq 0 ]; then
+            echo "ERROR: APP_STORE_CONNECT_KEY_ID or APP_STORE_CONNECT_ISSUER_ID is empty."
+            echo "Check the variable names in the appstore_credentials group."
+            exit 1
+          fi
+
           keychain initialize
+
+          echo "== fetch signing files =="
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+
+          COUNT=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name '*.mobileprovision' | wc -l | tr -d ' ')
+          echo "downloaded profiles: $COUNT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "ERROR: no provisioning profile was downloaded - see fetch output above"
+            exit 1
+          fi
+
           keychain add-certificates
           xcode-project use-profiles
       - name: Verify signing settings
