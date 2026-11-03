@@ -68,13 +68,9 @@ workflows:
         script: |
           set -euo pipefail
 
-          echo "== credential sanity check =="
-          for v in APP_STORE_CONNECT_PRIVATE_KEY APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID CERTIFICATE_PRIVATE_KEY; do
-            val="${!v:-}"
-            echo "$v length=${#val}"
-          done
+          # Codemagic's CLI reads APP_STORE_CONNECT_KEY_IDENTIFIER (not KEY_ID).
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="${APP_STORE_CONNECT_KEY_IDENTIFIER:-${APP_STORE_CONNECT_KEY_ID:-}}"
 
-          # Normalise values that arrived with escaped newlines or as base64.
           normalise() {
             local value="$1"
             case "$value" in
@@ -94,16 +90,22 @@ workflows:
           CERTIFICATE_PRIVATE_KEY="$(normalise "${CERTIFICATE_PRIVATE_KEY:-}")"
           export APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY
 
+          KEY_LEN=$(printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" | wc -c | tr -d ' ')
+          KEY_ID_LEN=$(printf '%s' "${APP_STORE_CONNECT_KEY_IDENTIFIER:-}" | wc -c | tr -d ' ')
+          ISSUER_LEN=$(printf '%s' "${APP_STORE_CONNECT_ISSUER_ID:-}" | wc -c | tr -d ' ')
+          PEM_LEN=$(printf '%s' "$CERTIFICATE_PRIVATE_KEY" | wc -c | tr -d ' ')
+
+          echo "== credential sanity check =="
+          echo "APP_STORE_CONNECT_PRIVATE_KEY length=$KEY_LEN"
+          echo "APP_STORE_CONNECT_KEY_IDENTIFIER length=$KEY_ID_LEN"
+          echo "APP_STORE_CONNECT_ISSUER_ID length=$ISSUER_LEN"
+          echo "CERTIFICATE_PRIVATE_KEY length=$PEM_LEN"
           echo "p8 header  : ${APP_STORE_CONNECT_PRIVATE_KEY%%$'\n'*}"
           echo "pem header : ${CERTIFICATE_PRIVATE_KEY%%$'\n'*}"
-          KEY_ID_LEN=$(printf '%s' "${APP_STORE_CONNECT_KEY_ID:-}" | wc -c | tr -d ' ')
-          ISSUER_LEN=$(printf '%s' "${APP_STORE_CONNECT_ISSUER_ID:-}" | wc -c | tr -d ' ')
-          echo "key id len : $KEY_ID_LEN"
-          echo "issuer len : $ISSUER_LEN"
 
-          if [ "$KEY_ID_LEN" -eq 0 ] || [ "$ISSUER_LEN" -eq 0 ]; then
-            echo "ERROR: APP_STORE_CONNECT_KEY_ID or APP_STORE_CONNECT_ISSUER_ID is empty."
-            echo "Check the variable names in the appstore_credentials group."
+          if [ "$KEY_ID_LEN" -eq 0 ]; then
+            echo "ERROR: APP_STORE_CONNECT_KEY_IDENTIFIER is empty."
+            echo "Rename the variable APP_STORE_CONNECT_KEY_ID to APP_STORE_CONNECT_KEY_IDENTIFIER."
             exit 1
           fi
 
@@ -115,7 +117,7 @@ workflows:
           COUNT=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name '*.mobileprovision' | wc -l | tr -d ' ')
           echo "downloaded profiles: $COUNT"
           if [ "$COUNT" -eq 0 ]; then
-            echo "ERROR: no provisioning profile was downloaded - see fetch output above"
+            echo "ERROR: no provisioning profile was downloaded"
             exit 1
           fi
 
@@ -147,6 +149,6 @@ workflows:
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_ID
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
