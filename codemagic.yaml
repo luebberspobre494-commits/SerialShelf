@@ -41,7 +41,7 @@ workflows:
       vars:
         XCODE_PROJECT: SerialShelf.xcodeproj
         XCODE_SCHEME: SerialShelf
-        BUNDLE_ID: com.example.serialshelf
+        BUNDLE_ID: com.luebberspobre.serialshelf
       # In Codemagic: App settings → Environment variables → this group.
       # APP_STORE_CONNECT_PRIVATE_KEY (.p8 contents, base64 is fine)
       # APP_STORE_CONNECT_KEY_ID
