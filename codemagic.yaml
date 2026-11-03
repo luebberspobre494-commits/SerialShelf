@@ -114,7 +114,14 @@ workflows:
           echo "== fetch signing files =="
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
 
-          COUNT=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" -name '*.mobileprovision' | wc -l | tr -d ' ')
+          COUNT=0
+          for d in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            if [ -d "$d" ]; then
+              n=$(find "$d" -name '*.mobileprovision' | wc -l | tr -d ' ')
+              echo "profiles in $d: $n"
+              COUNT=$((COUNT + n))
+            fi
+          done
           echo "downloaded profiles: $COUNT"
           if [ "$COUNT" -eq 0 ]; then
             echo "ERROR: no provisioning profile was downloaded"
@@ -126,7 +133,10 @@ workflows:
       - name: Verify signing settings
         script: |
           echo "--- downloaded profiles ---"
-          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles" || true
+          for d in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            echo "--- $d ---"
+            ls -la "$d" 2>/dev/null || echo "(missing)"
+          done
           for p in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
             [ -e "$p" ] || continue
             echo "profile file: $(basename "$p")"
