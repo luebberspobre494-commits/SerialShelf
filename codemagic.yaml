@@ -1,4 +1,38 @@
 workflows:
+  ios-build:
+    name: iOS — Build only (no signing)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      vars:
+        XCODE_PROJECT: SerialShelf.xcodeproj
+        XCODE_SCHEME: SerialShelf
+      xcode: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Show Xcode version
+        script: xcodebuild -version
+      - name: Install XcodeGen
+        script: |
+          command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
+          xcodegen --version
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate
+          xcodebuild -list -project "$XCODE_PROJECT"
+      - name: Build for simulator
+        script: |
+          set -o pipefail
+          xcodebuild build \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -destination 'generic/platform=iOS Simulator' \
+            -quiet
   ios-testflight:
     name: iOS — TestFlight
     max_build_duration: 60
