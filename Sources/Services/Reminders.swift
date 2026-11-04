@@ -1,7 +1,7 @@
 import Foundation
 import UserNotifications
 
-/// Local reminders only — no push, no server. One notification per item, set
+/// Local reminders only - no push, no server. One notification per item, set
 /// 30 days before the warranty ends.
 enum Reminders {
     static func requestAuthorization() async -> Bool {
@@ -27,8 +27,8 @@ enum Reminders {
         guard fireDate > .now else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "\(item.name) 的保修快到期了"
-        content.body = "还剩 30 天。需要维修或延保的话，现在就该联系。"
+        content.title = "Warranty ending for \(item.name)"
+        content.body = "30 days left. Contact the seller now if it needs a repair."
         content.sound = .default
 
         let components = Calendar.current.dateComponents([.year, .month, .day, .hour], from: fireDate)
