@@ -51,11 +51,7 @@ workflows:
         - appstore_credentials
       xcode: latest
     triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
+      events: []
     scripts:
       - name: Install XcodeGen
         script: |
@@ -162,3 +158,161 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
+
+  ios-adhoc:
+    name: iOS — Ad-hoc web install
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      vars:
+        XCODE_PROJECT: SerialShelf.xcodeproj
+        XCODE_SCHEME: SerialShelf
+        BUNDLE_ID: com.luebberspobre.serialshelf
+        TEAM_ID: 6FY8HHKPS2
+        PAGES_URL: https://luebberspobre494-commits.github.io/SerialShelf/
+      groups:
+        - appstore_credentials
+      xcode: latest
+    triggering:
+      events: []
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
+      - name: Generate Xcode project
+        script: |
+          xcodegen generate
+      - name: Set up ad-hoc signing
+        script: |
+          set -euo pipefail
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="${APP_STORE_CONNECT_KEY_IDENTIFIER:-${APP_STORE_CONNECT_KEY_ID:-}}"
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_ADHOC --create
+          keychain add-certificates
+          xcode-project use-profiles
+          PROFILE_PATH=$(find "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles" -name '*.mobileprovision' 2>/dev/null | head -1)
+          echo "profile: $PROFILE_PATH"
+          security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -
+          security cms -D -i "$PROFILE_PATH" | plutil -extract Name raw -
+      - name: Archive and export ad-hoc IPA
+        script: |
+          set -euo pipefail
+          PROFILE_PATH=$(find "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" "$HOME/Library/MobileDevice/Provisioning Profiles" -name '*.mobileprovision' 2>/dev/null | head -1)
+          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | plutil -extract Name raw -)
+          echo "using profile: $PROFILE_NAME"
+
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath build/SerialShelf.xcarchive \
+            -quiet
+
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>ad-hoc</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>stripSwiftSymbols</key><true/>
+            <key>compileBitcode</key><false/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key><string>${PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath build/SerialShelf.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist build/ExportOptions.plist
+
+          ls -la build/ios/ipa
+      - name: Build install page
+        script: |
+          set -euo pipefail
+          IPA=$(ls build/ios/ipa/*.ipa | head -1)
+          SITE=_site
+          rm -rf "$SITE" && mkdir -p "$SITE"
+          cp "$IPA" "$SITE/SerialShelf.ipa"
+
+          cat > "$SITE/manifest.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>items</key>
+            <array>
+              <dict>
+                <key>assets</key>
+                <array>
+                  <dict>
+                    <key>kind</key><string>software-package</string>
+                    <key>url</key><string>${PAGES_URL}SerialShelf.ipa</string>
+                  </dict>
+                </array>
+                <key>metadata</key>
+                <dict>
+                  <key>bundle-identifier</key><string>${BUNDLE_ID}</string>
+                  <key>bundle-version</key><string>1.0.0</string>
+                  <key>kind</key><string>software</string>
+                  <key>title</key><string>SerialShelf</string>
+                </dict>
+              </dict>
+            </array>
+          </dict>
+          </plist>
+          PLIST
+
+          cat > "$SITE/index.html" <<HTML
+          <!doctype html>
+          <html lang="zh-CN">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>安装 SerialShelf</title>
+            <style>
+              body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+                     background:linear-gradient(160deg,#0e1a33,#2548b7); color:#fff;
+                     min-height:100vh; display:flex; align-items:center; justify-content:center; }
+              .card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+                      border-radius:22px; padding:34px 26px; max-width:340px; text-align:center;
+                      backdrop-filter:blur(12px); }
+              h1 { font-size:22px; margin:0 0 8px; }
+              p  { font-size:14px; line-height:1.6; color:rgba(255,255,255,.75); margin:0 0 22px; }
+              a.btn { display:block; background:#fff; color:#12224a; text-decoration:none;
+                      font-weight:600; font-size:17px; padding:15px; border-radius:14px; }
+              .hint { margin-top:18px; font-size:12px; color:rgba(255,255,255,.55); }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>SerialShelf</h1>
+              <p>序列号与保修管理</p>
+              <a class="btn" href="itms-services://?action=download-manifest&amp;url=${PAGES_URL}manifest.plist">安装到这台 iPhone</a>
+              <div class="hint">需用 Safari 打开 · 首次安装后信任开发者描述文件</div>
+            </div>
+          </body>
+          </html>
+          HTML
+
+          ls -la "$SITE"
+      - name: Publish to GitHub Pages
+        script: |
+          set -euo pipefail
+          cd _site
+          git init -q -b gh-pages
+          git config user.email "ci@codemagic.io"
+          git config user.name "Codemagic CI"
+          git add -A
+          git commit -qm "build ${BUILD_NUMBER}"
+          git remote add origin "https://x-access-token:${GH_PAGES_TOKEN}@github.com/luebberspobre494-commits/SerialShelf.git"
+          git push -f origin gh-pages
+          echo "published to ${PAGES_URL}"
+    artifacts:
+      - build/ios/ipa/*.ipa
