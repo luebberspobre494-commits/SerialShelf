@@ -35,7 +35,7 @@ enum SerialScanner {
         }
     }
 
-    private static let labels = ["SERIAL", "S/N", "SN", "IMEI", "序列号", "序号"]
+    private static let labels = ["SERIAL", "S/N", "SN", "IMEI", "SERIAL", "SN"]
 
     private static func rank(_ lines: [String]) -> [String] {
         var scored: [(text: String, score: Int)] = []
