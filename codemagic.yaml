@@ -18,7 +18,6 @@ workflows:
       - name: Show Xcode version
         script: xcodebuild -version
       - name: Install XcodeGen
-      - name: Install XcodeGen
         script: |
           command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
           xcodegen --version
