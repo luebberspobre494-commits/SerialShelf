@@ -271,11 +271,11 @@ workflows:
 
           cat > "$SITE/index.html" <<HTML
           <!doctype html>
-          <html lang="zh-CN">
+          <html lang="en">
           <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>安装 SerialShelf</title>
+            <title>Install SerialShelf</title>
             <style>
               body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
                      background:linear-gradient(160deg,#0e1a33,#2548b7); color:#fff;
@@ -288,18 +288,108 @@ workflows:
               a.btn { display:block; background:#fff; color:#12224a; text-decoration:none;
                       font-weight:600; font-size:17px; padding:15px; border-radius:14px; }
               .hint { margin-top:18px; font-size:12px; color:rgba(255,255,255,.55); }
+              .links { margin-top:14px; font-size:12px; }
+              .links a { color:rgba(255,255,255,.7); margin:0 8px; }
             </style>
           </head>
           <body>
             <div class="card">
               <h1>SerialShelf</h1>
-              <p>序列号与保修管理</p>
-              <a class="btn" href="itms-services://?action=download-manifest&amp;url=${PAGES_URL}manifest.plist">安装到这台 iPhone</a>
-              <div class="hint">需用 Safari 打开 · 首次安装后信任开发者描述文件</div>
+              <p>Serial numbers and warranty, on device.</p>
+              <a class="btn" href="itms-services://?action=download-manifest&amp;url=${PAGES_URL}manifest.plist">Install on this iPhone</a>
+              <div class="hint">Open in Safari. Tap Install, then trust the developer profile.</div>
+              <div class="links"><a href="privacy.html">Privacy</a><a href="support.html">Support</a></div>
             </div>
           </body>
           </html>
           HTML
+
+          cat > "$SITE/privacy.html" <<HTML2
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>SerialShelf Privacy Policy</title>
+            <style>
+              body { margin:0; padding:40px 20px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+                     background:#f7f8fa; color:#1b2436; line-height:1.7; }
+              main { max-width:640px; margin:0 auto; }
+              h1 { font-size:26px; margin:0 0 4px; }
+              .sub { color:#7a869c; font-size:13px; margin:0 0 28px; }
+              h2 { font-size:17px; margin:28px 0 8px; }
+              p, li { font-size:15px; }
+              ul { padding-left:20px; }
+            </style>
+          </head>
+          <body>
+            <main>
+              <h1>Privacy Policy</h1>
+              <p class="sub">SerialShelf for iOS - last updated 2026-11-04</p>
+              <p>SerialShelf stores every record on your device. The app has no account system, no
+                 analytics SDK, no advertising SDK and no backend server.</p>
+              <h2>What we collect</h2>
+              <p>Nothing. We do not collect, transmit or sell personal data.</p>
+              <h2>What stays on your device</h2>
+              <ul>
+                <li>Item records you enter: name, brand, serial number, category, purchase date, warranty length, value and notes.</li>
+                <li>Receipt photos you attach, stored inside the app container.</li>
+                <li>Local notification schedules you create.</li>
+              </ul>
+              <h2>Camera and photos</h2>
+              <p>When you scan a label or attach a receipt, the selected image is processed on device
+                 using Apple's Vision framework. Text recognition runs locally. Images are never uploaded.</p>
+              <h2>Notifications</h2>
+              <p>Warranty reminders are scheduled locally with the system notification framework. They are
+                 not sent from a server.</p>
+              <h2>Exports</h2>
+              <p>CSV export is created on device and handed to the share sheet you choose. We never see it.</p>
+              <h2>Children</h2>
+              <p>The app is not directed at children and collects no data from anyone.</p>
+              <h2>Contact</h2>
+              <p>Questions about this policy: luebberspobre494@gmail.com</p>
+            </main>
+          </body>
+          </html>
+          HTML2
+
+          cat > "$SITE/support.html" <<HTML3
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>SerialShelf Support</title>
+            <style>
+              body { margin:0; padding:40px 20px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+                     background:#f7f8fa; color:#1b2436; line-height:1.7; }
+              main { max-width:640px; margin:0 auto; }
+              h1 { font-size:26px; margin:0 0 4px; }
+              .sub { color:#7a869c; font-size:13px; margin:0 0 28px; }
+              h2 { font-size:17px; margin:28px 0 8px; }
+              p, li { font-size:15px; }
+              ul { padding-left:20px; }
+            </style>
+          </head>
+          <body>
+            <main>
+              <h1>Support</h1>
+              <p class="sub">SerialShelf for iOS</p>
+              <h2>Contact</h2>
+              <p>Email luebberspobre494@gmail.com and we usually reply within two business days.</p>
+              <h2>Common questions</h2>
+              <ul>
+                <li><strong>Where is my data stored?</strong> Only on this device. Deleting the app deletes the data, so export a CSV first.</li>
+                <li><strong>How do I move to a new phone?</strong> Export a CSV from Settings, then import it on the new device.</li>
+                <li><strong>Why no reminders?</strong> Allow notifications in Settings, then reopen the app.</li>
+                <li><strong>Scanning does not find the serial.</strong> Photograph the label straight on, fill the frame, avoid glare.</li>
+              </ul>
+              <h2>Refunds</h2>
+              <p>The app is free. Purchases, if any, are handled by Apple: reportaproblem.apple.com</p>
+            </main>
+          </body>
+          </html>
+          HTML3
 
           ls -la "$SITE"
       - name: Publish to GitHub Pages
