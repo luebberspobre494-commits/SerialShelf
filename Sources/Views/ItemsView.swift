@@ -58,7 +58,6 @@ struct ItemsView: View {
                 }
             }
             .navigationTitle("SerialShelf")
-            .searchable(text: $search, prompt: "Search name, brand or serial")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
@@ -80,7 +79,10 @@ struct ItemsView: View {
                 }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
-                categoryBar
+                VStack(spacing: 0) {
+                    searchBar
+                    categoryBar
+                }
             }
             .sheet(isPresented: $showingAdd) {
                 AddItemView()
@@ -101,6 +103,34 @@ struct ItemsView: View {
                 Text("\(importedCount ?? 0) items added from the CSV file.")
             }
         }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            TextField("Search name, brand or serial", text: $search)
+                .font(.subheadline)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !search.isEmpty {
+                Button {
+                    search = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+        .background(.bar)
     }
 
     private var categoryBar: some View {
