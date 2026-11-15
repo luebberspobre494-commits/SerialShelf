@@ -10,6 +10,9 @@ struct RootView: View {
             WarrantyView()
                 .tabItem { Label("Warranty", systemImage: "shield.lefthalf.filled") }
 
+            CalendarView()
+                .tabItem { Label("Calendar", systemImage: "calendar") }
+
             ReportsView()
                 .tabItem { Label("Reports", systemImage: "chart.bar.fill") }
 
