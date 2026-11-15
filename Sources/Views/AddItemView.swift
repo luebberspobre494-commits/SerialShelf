@@ -19,6 +19,8 @@ struct AddItemView: View {
     @State private var labelPhoto: PhotosPickerItem?
     @State private var receiptPhoto: PhotosPickerItem?
     @State private var receiptPreview: Data?
+    @State private var receiptScanning = false
+    @State private var receiptSummary: String?
     @State private var candidates: [String] = []
     @State private var scanning = false
     @State private var scanMessage: String?
@@ -73,7 +75,7 @@ struct AddItemView: View {
             }
             .onChange(of: receiptPhoto) { _, newValue in
                 guard let newValue else { return }
-                Task { receiptPreview = try? await newValue.loadTransferable(type: Data.self) }
+                Task { await readReceipt(newValue) }
             }
         }
     }
@@ -130,6 +132,14 @@ struct AddItemView: View {
             PhotosPicker(selection: $receiptPhoto, matching: .images) {
                 Label(receiptPreview == nil ? "Attach receipt" : "Change receipt", systemImage: "doc.viewfinder")
             }
+            if receiptScanning {
+                ProgressView("Reading receipt...")
+            }
+            if let receiptSummary {
+                Text(receiptSummary)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             if let receiptPreview, let image = UIImage(data: receiptPreview) {
                 Image(uiImage: image)
                     .resizable()
@@ -161,6 +171,43 @@ struct AddItemView: View {
         } else {
             scanMessage = "No serial-like text found. You can type it in."
         }
+    }
+
+    /// Reads the receipt photo and fills in the merchant, the total and the
+    /// purchase date. The user can still correct anything before saving.
+    private func readReceipt(_ pick: PhotosPickerItem) async {
+        receiptScanning = true
+        receiptSummary = nil
+        defer { receiptScanning = false }
+
+        guard let data = try? await pick.loadTransferable(type: Data.self) else {
+            receiptSummary = "Could not read that photo."
+            return
+        }
+        receiptPreview = data
+
+        let fields = await ReceiptScanner.scan(data)
+        if fields.isEmpty {
+            receiptSummary = "No total or date found. Fill them in by hand."
+            return
+        }
+
+        var filled: [String] = []
+        if let merchant = fields.merchant, brand.trimmingCharacters(in: .whitespaces).isEmpty {
+            brand = merchant
+            filled.append("brand")
+        }
+        if let amount = fields.amount, (Double(value) ?? 0) == 0 {
+            value = String(format: "%.2f", amount)
+            filled.append("value")
+        }
+        if let date = fields.date {
+            purchaseDate = date
+            filled.append("date")
+        }
+        receiptSummary = filled.isEmpty
+            ? "Receipt attached."
+            : "Filled from receipt: " + filled.joined(separator: ", ") + "."
     }
 
     private func save() {
