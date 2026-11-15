@@ -11,6 +11,7 @@ struct ItemDetailView: View {
 
     @State private var showingDeleteConfirm = false
     @State private var newReceipt: PhotosPickerItem?
+    @State private var cardURL: URL?
 
     var body: some View {
         Form {
@@ -56,6 +57,7 @@ struct ItemDetailView: View {
             warrantySection
             receiptSection
             claimSection
+            cardSection
 
             Section("Notes") {
                 TextField("Optional", text: $item.notes, axis: .vertical)
@@ -93,6 +95,42 @@ struct ItemDetailView: View {
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private var cardSection: some View {
+        Section {
+            if let cardURL {
+                ShareLink(item: cardURL) {
+                    Label("Share warranty card", systemImage: "square.and.arrow.up")
+                }
+            } else {
+                Button {
+                    makeCard()
+                } label: {
+                    Label("Create warranty card", systemImage: "rectangle.portrait.on.rectangle.portrait")
+                }
+            }
+        } header: {
+            Text("Warranty card")
+        } footer: {
+            Text("An image you can send to a buyer or a repair desk. Generated on this device.")
+        }
+        .task { makeCard() }
+    }
+
+    @MainActor
+    private func makeCard() {
+        guard cardURL == nil,
+              let image = WarrantyCardRenderer.image(for: item),
+              let data = image.pngData() else { return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("WarrantyCard-\(item.name).png")
+        do {
+            try data.write(to: url, options: .atomic)
+            cardURL = url
+        } catch {
+            cardURL = nil
         }
     }
 
